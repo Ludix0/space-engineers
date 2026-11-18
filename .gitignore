@@ -1,0 +1,6 @@
+.env
+*.env
+!.env.example
+.actif
+description.txt
+claude.sh

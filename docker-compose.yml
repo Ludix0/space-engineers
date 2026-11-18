@@ -1,0 +1,70 @@
+services:
+  space-engineers:
+    build: .
+    image: ludix0/space-engineers:latest
+    container_name: space-engineers
+    restart: unless-stopped
+    # Laisse le temps au serveur de sauvegarder le monde après SIGTERM
+    # (doit rester supérieur à SHUTDOWN_TIMEOUT).
+    stop_grace_period: 120s
+    volumes:
+      # Fichiers du serveur (téléchargés une seule fois, mis à jour par SteamCMD)
+      - ${HOME}/volumes/space-engineers/filesServer:/home/steam/se_server
+      # Instance : monde (Saves/), sauvegardes de secours, logs du serveur
+      - ${HOME}/volumes/space-engineers/saves:/home/steam/se_saves
+      # Fichier maître SpaceEngineers-Dedicated.cfg (contient le hash du mot de passe)
+      - ${HOME}/volumes/space-engineers/config:/home/steam/se_config
+      # Préfixe Wine (.NET 4.8, VC++ 2019) : installé une seule fois
+      - ${HOME}/volumes/space-engineers/wineprefix:/home/steam/wineprefix
+      # SteamCMD partagé avec les autres serveurs de jeu
+      - ${HOME}/volumes/steamcmd:/home/steam/steamcmd
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      # Port de jeu UDP = jeux1 du fichier partagé (identique hôte/conteneur, imposé dans le .cfg)
+      - GAME_PORT=${jeux1}
+      # true = met à jour le jeu via SteamCMD à chaque démarrage
+      - UPDATE_ON_START=true
+      # Remplace les DLL Steam du serveur par celles du SDK Redist (mods Workshop)
+      - STEAM_DLL_FIX=true
+      # Secondes laissées au serveur pour sauvegarder à l'arrêt
+      - SHUTDOWN_TIMEOUT=90
+      # --- Utilisés UNIQUEMENT à la création du .cfg par défaut (1er démarrage) ---
+      # Ensuite, modifier directement config/SpaceEngineers-Dedicated.cfg
+      - SERVER_NAME=Ludix_SpaceEngineers_FR
+      - WORLD_NAME=Ludix World
+      # Survival ou Creative
+      - GAME_MODE=Survival
+      # PUBLIC, PRIVATE, FRIENDS ou OFFLINE
+      - ONLINE_MODE=PUBLIC
+      - MAX_PLAYERS=8
+      # Scénario de départ (dossier de Content/CustomWorlds dans filesServer)
+      - SCENARIO=Star System
+      # SteamID64 des administrateurs, séparés par des virgules (pas un secret)
+      - ADMIN_STEAMIDS=
+    ports:
+      # Seul port nécessaire : le jeu (UDP). L'API distante (TCP 8080) n'est pas
+      # publiée : elle repose sur http.sys, non fonctionnel sous Wine.
+      # Même numéro des deux côtés : le serveur annonce ce port à Steam.
+      - "${jeux1}:${jeux1}/udp"
+    # Ressources (VM : 9 vCPU, 34 Go RAM). Le serveur est surtout limité par
+    # un seul cœur (thread de simulation) ; la RAM grandit avec le monde.
+    cpus: 4
+    mem_limit: 12g
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # Nécessaires uniquement au script de démarrage (usermod/chown/gosu)
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
