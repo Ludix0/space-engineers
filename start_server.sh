@@ -219,7 +219,9 @@ game_running() { pgrep -f "$GAME_PATTERN" >/dev/null 2>&1; }
 
 shutdown_server() {
     log "SIGTERM reçu : arrêt propre du serveur (délai max ${SHUTDOWN_TIMEOUT:-90} s)"
-    pkill -INT -f "$GAME_PATTERN"
+    # Envoyé en tant que steam : avec cap_drop ALL, root n'a plus CAP_KILL et ne
+    # peut pas signaler un processus d'un autre utilisateur (« Operation not permitted »).
+    as_steam pkill -INT -f "$GAME_PATTERN"
     for _ in $(seq 1 "${SHUTDOWN_TIMEOUT:-90}"); do
         game_running || break
         sleep 1

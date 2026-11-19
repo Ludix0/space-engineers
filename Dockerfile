@@ -33,7 +33,9 @@ RUN dpkg --add-architecture i386 \
     && apt-get install -y --no-install-recommends \
         gosu tini procps \
         xvfb xauth winbind cabextract unzip \
-    && apt-get install -y --install-recommends \
+    # --no-install-recommends : évite ~1,2 Go de paquets inutiles sur un serveur
+    # sans écran (pilotes graphiques mesa/vulkan/llvm, codecs vidéo, GTK, sane…).
+    && apt-get install -y --no-install-recommends \
         winehq-stable=${WINE_VERSION} \
         wine-stable=${WINE_VERSION} \
         wine-stable-amd64=${WINE_VERSION} \
